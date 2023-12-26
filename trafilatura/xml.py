@@ -56,7 +56,7 @@ META_ATTRIBUTES = [
     'fingerprint', 'language'
 ]
 
-HI_FORMATTING = {'#b': '**', '#i': '*', '#u': '__', '#t': '`'}
+HI_FORMATTING = {'#b': '**', '#i': '*', '#u': '__', '#t': '`', '#code': '`'}
 
 
 def build_json_output(docmeta):
@@ -106,6 +106,11 @@ def strip_double_tags(tree):
                 continue
             if subelem.tag == elem.tag:
                 merge_with_parent(subelem)
+    return tree
+
+def merge_hi(tree, include_formatting):
+    for elem in tree.iter('hi'):
+        merge_with_parent(elem, include_formatting)
     return tree
 
 
@@ -243,7 +248,7 @@ def replace_element_text(element, include_formatting):
     return (element.text or '') + (element.tail or '')
 
 
-def merge_with_parent(element, include_formatting=False):
+def merge_with_parent(element, include_formatting=False, seperator=' '):
     '''Merge element with its parent and convert formatting to markdown.'''
     parent = element.getparent()
     if not parent:
@@ -255,11 +260,11 @@ def merge_with_parent(element, include_formatting=False):
     if previous is not None:
         # There is a previous node, append text to its tail
         if previous.tail is not None:
-            previous.tail = f'{previous.tail} {full_text}'
+            previous.tail = f'{previous.tail}{seperator}{full_text}'
         else:
             previous.tail = full_text
     elif parent.text is not None:
-        parent.text = f'{parent.text} {full_text}'
+        parent.text = f'{parent.text}{seperator}{full_text}'
     else:
         parent.text = full_text
     parent.remove(element)

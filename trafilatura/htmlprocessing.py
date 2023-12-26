@@ -17,6 +17,7 @@ from lxml.html.clean import Cleaner
 from .filters import duplicate_test, textfilter
 from .settings import CUT_EMPTY_ELEMS, MANUALLY_CLEANED, MANUALLY_STRIPPED
 from .utils import trim, uniquify_list
+from .xml import merge_with_parent
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +55,8 @@ REND_TAG_MAPPING = {
     'tt': '#t',
     'var': '#t',
     'sub': '#sub',
-    'sup': '#sup'
+    'sup': '#sup',
+    'code': '#code'
 }
 
 
@@ -230,7 +232,7 @@ def delete_by_link_density(subtree, tagname, backtracking=False, favor_precision
     return subtree
 
 
-def convert_tags(tree, options, url=None):
+def convert_tags(tree, options, url=None, include_formatting=False):
     '''Simplify markup and convert relevant HTML tags to an XML standard'''
     # delete links for faster processing
     if options.links is False:
@@ -260,9 +262,14 @@ def convert_tags(tree, options, url=None):
         strip_tags(tree, *REND_TAG_MAPPING)
     else:
         for elem in tree.iter(list(REND_TAG_MAPPING)):
+            
+            if elem.tag == "code" and elem.getparent().tag == "pre":
+                    continue
+
             attribute = REND_TAG_MAPPING[elem.tag]
             elem.tag = 'hi'
             elem.set('rend', attribute)
+            merge_with_parent(elem, include_formatting, seperator='')
     # iterate over all concerned elements
     for elem in tree.iter('blockquote', 'br', 'del', 'details', 'dl', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'ol', 'pre', 'q', 's', 'strike', 'ul'):
         # ul/ol → list / li → item
@@ -299,7 +306,7 @@ def convert_tags(tree, options, url=None):
                 # detect if there could be code inside
                 children = elem.getchildren()
                 # pre with a single span is more likely to be code
-                if len(children) == 1 and children[0].tag == 'span':
+                if len(children) == 1 and children[0].tag in ['span', "code"]:
                     code_flag = True
             # find hljs elements to detect if it's code
             code_elems = elem.xpath(".//span[starts-with(@class,'hljs')]")
@@ -308,7 +315,8 @@ def convert_tags(tree, options, url=None):
                 for subelem in code_elems:
                     subelem.attrib.clear()
             if code_flag:
-                elem.tag = 'code'
+                elem.getparent().remove(elem)
+                # elem.tag = 'code'
             else:
                 elem.tag = 'quote'
         # del | s | strike → <del rend="overstrike">

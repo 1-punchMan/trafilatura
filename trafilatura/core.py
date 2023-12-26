@@ -29,7 +29,7 @@ from .metadata import Document, extract_metadata
 from .settings import DEFAULT_CONFIG, TAG_CATALOG, use_config
 from .utils import is_image_file, load_html, normalize_unicode, trim, txttocsv, FORMATTING_PROTECTED
 from .xml import (build_json_output, build_tei_output, build_xml_output,
-                  control_xml_output, remove_empty_elements, strip_double_tags,
+                  control_xml_output, remove_empty_elements, strip_double_tags, merge_hi,
                   xmltotxt)
 from .xpaths import (BODY_XPATH, COMMENTS_DISCARD_XPATH, COMMENTS_XPATH,
                      DISCARD_IMAGE_ELEMENTS, OVERALL_DISCARD_XPATH,
@@ -824,6 +824,7 @@ def determine_returnstring(document, output_format, include_formatting, tei_vali
         returnstring = build_json_output(document)
     # TXT
     else:
+        # merge_hi(document.body, include_formatting)
         returnstring = xmltotxt(document.body, include_formatting)
         if document.commentsbody is not None:
             comments_text = xmltotxt(document.commentsbody, include_formatting)
@@ -957,7 +958,7 @@ def bare_extraction(filecontent, url=None, no_fallback=False,  # fast=False,
         cleaned_tree_backup = deepcopy(cleaned_tree)
 
         # convert tags, the rest does not work without conversion
-        cleaned_tree = convert_tags(cleaned_tree, options, url or document.url)
+        cleaned_tree = convert_tags(cleaned_tree, options, url or document.url, include_formatting)
 
         # comments first, then remove
         if include_comments is True:
